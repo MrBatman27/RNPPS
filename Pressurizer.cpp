@@ -1,4 +1,5 @@
 #include<iostream>
+#include<fstream>
 double dummywtemp;
 struct ERod {
     double epow; // Electric rod power
@@ -9,6 +10,7 @@ struct ERod {
     double voltage = 480; // taking it as standard voltage of an electric industrial heater which varies from 240V to 600V
     double resistance = 10; // taking it as 10 ohms simply
     double watertemp;
+    int numofrods = 112;
 };
 
 void update(ERod& er1, double dtemp, double dti ) {   //dti means delta time
@@ -19,7 +21,7 @@ void update(ERod& er1, double dtemp, double dti ) {   //dti means delta time
         er1.hdem = dtemp * 5111 * er1.wmass;
         er1.rstat = 1; 
         //Power = (Voltage)^2 / R,
-        er1.epow =(er1.voltage * er1.voltage) / er1. resistance;
+        er1.epow =(((er1.voltage * er1.voltage) / er1. resistance) * er1.numofrods) ;
         // 1W = 1J
 
         er1.hgen = er1.epow * dti; // to make the heat level step ups sensible and not just instant
@@ -31,7 +33,7 @@ void update(ERod& er1, double dtemp, double dti ) {   //dti means delta time
     else if( dtemp < -0.2000){     // margin of -0.2000
         er1.hdem =  dtemp * 5111 * er1.wmass;
         er1.rstat = -1;
-        er1.epow =(er1.voltage * er1.voltage) / er1. resistance; 
+        er1.epow =(((er1.voltage * er1.voltage) / er1. resistance) * er1.numofrods); 
         er1.hgen = -er1.epow * dti ;
         er1.watertemp = er1.watertemp + (er1.hgen / (er1.wmass * 5111));
     
@@ -54,31 +56,34 @@ int main(){
     std :: cout << "Enter Water Mass present: ";
     std :: cin >> r1.wmass;
     double dti = 0.1;
-    for (int i = 0; i < 10 ; i++){
+    int i = 0;
+    std::ofstream datafile("pressurizer_data.txt");
+    while (r1.watertemp < 344.8){
         dwt = 345 - r1.watertemp; // calculated ONCE before loop, never again
         update(r1, dwt, dti);
-
+        datafile << i << " " << r1.watertemp << " " << r1.hdem/1000 << " " << r1.epow << " " << r1.hgen << "\n";
         std :: cout << "Timestep " << i << std:: endl;
         std :: cout << "Heat demand is: " << r1.hdem/1000<< "kJ" << std:: endl;
-        if(r1.rstat += 1){
-            std::cout << "Electric Rod power is: " << r1.epow <<std:: endl;
+        if(r1.rstat == 1){
+            std::cout << "Electric Rod power is: " << r1.epow <<" kW"<<std:: endl;
             std::cout << "Electric Rod state is On" << std :: endl;
             std::cout << "Electric Rod heat generated is: " << r1.hgen << std :: endl;
             std::cout << "New Water temperature is: " << r1.watertemp << std :: endl;
         }
         else if(r1.rstat == -1){
-            std::cout << "Electric Rod power is: " << r1.epow <<std:: endl;
+            std::cout << "Electric Rod power is: " << r1.epow << " kW"<<std:: endl;
             std::cout << "Electric Rod state is Off" << std :: endl;
             std::cout << "Electric Rod heat generated is: " << r1.hgen << std :: endl;
                std::cout << "New Water temperature is: " << r1.watertemp << std :: endl;
         }
         else {
-            std::cout << "Electric Rod power is: " << r1.epow <<std :: endl;
+            std::cout << "Electric Rod power is: " << r1.epow << " kW"<<std :: endl;
             std::cout << "Electric Rod state is Off" << std :: endl;
             std::cout << "Electric Rod heat generated is: " << r1.hgen << std :: endl;
                std::cout << "New Water temperature is: " << r1.watertemp << std :: endl;
         }
-        
+        i++;
     }
-
+    datafile.close();
+    return 0;
 }
